@@ -34,12 +34,12 @@ import Hedgehog.Internal.Runner as H
 import Hedgehog.Internal.Report
 import Hedgehog.Internal.Seed as Seed
 
-data HP = HP T.TestName Property
+data HP = HP PropertyName Property
   deriving (Typeable)
 
 -- | Create a 'Test' from a Hedgehog property
-testProperty :: T.TestName -> Property -> T.TestTree
-testProperty name prop = T.singleTest name (HP name prop)
+testProperty :: T.TestName -> PropertyName -> Property -> T.TestTree
+testProperty name propName prop = T.singleTest name (HP propName prop)
 
 -- | The replay token to use for replaying a previous test run
 newtype HedgehogReplay = HedgehogReplay (Maybe (Size, Seed))
@@ -130,11 +130,11 @@ reportToProgress config (Report testsDone _ _ status) =
         T.Progress "Shrinking" (ratio (failureShrinks fr) shrinkLimit)
 
 reportOutput :: Bool
-             -> String
+             -> PropertyName
              -> Report Result
              -> IO String
 reportOutput showReplay name report = do
-  s <- renderResult DisableColor (Just (PropertyName name)) report
+  s <- renderResult DisableColor (Just name) report
   pure $ case reportStatus report of
     Failed fr ->
       let
@@ -161,7 +161,7 @@ instance T.IsTest HP where
            , Option (Proxy :: Proxy HedgehogShrinkRetries)
            ]
 
-  run opts (HP name (Property pConfig pTest)) yieldProgress = do
+  run opts (HP propName (Property pConfig pTest)) yieldProgress = do
     let
       HedgehogReplay         replay = lookupOption opts
       HedgehogShowReplay showReplay = lookupOption opts
@@ -188,5 +188,5 @@ instance T.IsTest HP where
                  then T.testPassed
                  else T.testFailed
 
-    out <- reportOutput showReplay name report
+    out <- reportOutput showReplay propName report
     return $ resultFn out
